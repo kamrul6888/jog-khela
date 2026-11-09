@@ -16,7 +16,7 @@ jobs:
           java-version: '17'
       - uses: gradle/actions/setup-gradle@v4
         with:
-          gradle-version: '8.11.1'
+          gradle-version: '8.14.3'
       - name: Build signed APK and AAB
         env:
           KEYSTORE_PASSWORD: siAMWHzKaIZkf1wTLax3
@@ -28,7 +28,7 @@ jobs:
           echo "::notice::keystore ok"
           export KEYSTORE_FILE=$RUNNER_TEMP/release.jks
           gradle assembleRelease bundleRelease --stacktrace > build.log 2>&1 || {
-            grep -E "error:|Error|FAILED|What went wrong" -A4 build.log | head -50 | while IFS= read -r l; do echo "::error::$l"; done
+            grep -E "error:|Error|FAILED|What went wrong|issue was found" -A12 build.log | head -50 | while IFS= read -r l; do echo "::error::$l"; done
             tail -15 build.log | while IFS= read -r l; do echo "::error::TAIL $l"; done
             exit 1; }
           echo "::notice::gradle ok"
