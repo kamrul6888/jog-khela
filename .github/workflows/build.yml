@@ -19,14 +19,14 @@ jobs:
           gradle-version: '8.11.1'
       - name: Restore signing key
         env:
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEYSTORE_PASSWORD: siAMWHzKaIZkf1wTLax3
         run: openssl enc -d -aes-256-cbc -pbkdf2 -in release.jks.enc -out $RUNNER_TEMP/release.jks -pass env:KEYSTORE_PASSWORD
       - name: Build signed APK and AAB
         env:
           KEYSTORE_FILE: ${{ runner.temp }}/release.jks
-          KEYSTORE_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEYSTORE_PASSWORD: siAMWHzKaIZkf1wTLax3
           KEY_ALIAS: jogkhela
-          KEY_PASSWORD: ${{ secrets.KEYSTORE_PASSWORD }}
+          KEY_PASSWORD: siAMWHzKaIZkf1wTLax3
         run: gradle assembleRelease bundleRelease
       - uses: actions/upload-artifact@v4
         with:
