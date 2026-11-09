@@ -5,6 +5,9 @@ on:
     branches: [ main ]
   workflow_dispatch:
 
+permissions:
+  contents: write
+
 jobs:
   build:
     runs-on: ubuntu-24.04
@@ -38,3 +41,14 @@ jobs:
           path: |
             app/build/outputs/apk/release/*.apk
             app/build/outputs/bundle/release/*.aab
+      - name: Rename files
+        run: |
+          cp app/build/outputs/apk/release/*.apk jog-khela.apk
+          cp app/build/outputs/bundle/release/*.aab jog-khela.aab
+      - uses: softprops/action-gh-release@v2
+        with:
+          tag_name: build-${{ github.run_number }}
+          name: যোগ খেলা build ${{ github.run_number }}
+          files: |
+            jog-khela.apk
+            jog-khela.aab
