@@ -1,0 +1,169 @@
+<!DOCTYPE html>
+<html lang="bn">
+<head>
+<meta charset="UTF-8">
+<meta name="viewport" content="width=device-width, initial-scale=1, maximum-scale=1, user-scalable=no">
+<title>যোগ খেলা</title>
+<style>
+  *{box-sizing:border-box;margin:0;padding:0;-webkit-tap-highlight-color:transparent}
+  body{font-family:"Noto Sans Bengali","Hind Siliguri",sans-serif;background:linear-gradient(160deg,#1e3a8a,#6d28d9);color:#fff;min-height:100vh;display:flex;justify-content:center}
+  .app{width:100%;max-width:480px;padding:18px;display:flex;flex-direction:column;min-height:100vh}
+  h1{text-align:center;font-size:32px;margin:40px 0 8px}
+  .sub{text-align:center;opacity:.85;margin-bottom:30px;font-size:18px}
+  .screen{display:none;flex:1;flex-direction:column}
+  .screen.active{display:flex}
+  .bar{display:flex;justify-content:space-between;align-items:center;font-size:18px;margin:6px 0 22px}
+  .lives{letter-spacing:3px}
+  .question{background:#fff;color:#1e1b4b;border-radius:22px;text-align:center;padding:30px 10px;font-size:52px;font-weight:700}
+  .answer{margin:16px 0;background:rgba(255,255,255,.15);border-radius:16px;text-align:center;font-size:38px;min-height:64px;line-height:64px}
+  .answer.ok{background:#16a34a}.answer.bad{background:#dc2626;font-size:26px}
+  .pad{display:grid;grid-template-columns:repeat(3,1fr);gap:10px;margin-top:auto}
+  .pad button{border:none;border-radius:16px;background:rgba(255,255,255,.92);color:#1e1b4b;font-size:28px;padding:16px 0;font-family:inherit;font-weight:700}
+  .pad button:active{background:#facc15}
+  .pad .go{background:#22c55e;color:#fff}
+  .pad .del{background:#f87171;color:#fff}
+  .card{background:#fff;color:#1e1b4b;border-radius:22px;padding:26px;text-align:center;margin-top:30px}
+  .card h2{font-size:26px;margin-bottom:10px}
+  .big{font-size:56px;font-weight:700;color:#6d28d9;margin:8px 0}
+  .btn{display:block;width:100%;border:none;border-radius:14px;padding:15px;font-size:19px;font-family:inherit;margin-top:12px;font-weight:600}
+  .btn.main{background:#6d28d9;color:#fff}
+  .btn.start{background:#facc15;color:#1e1b4b;font-size:24px;padding:20px}
+  .btn.video{background:#f59e0b;color:#fff}
+  .btn.light{background:#e5e7eb;color:#1e1b4b}
+  .best{text-align:center;margin-top:20px;opacity:.85}
+  .toast{position:fixed;bottom:24px;left:50%;transform:translateX(-50%);background:#111827;color:#fff;padding:12px 18px;border-radius:12px;font-size:15px;display:none;max-width:90%;text-align:center}
+</style>
+</head>
+<body>
+<div class="app">
+
+  <!-- হোম -->
+  <div class="screen active" id="home">
+    <h1>যোগ খেলা ➕</h1>
+    <p class="sub">সহজ যোগ করো, স্কোর বাড়াও!</p>
+    <button class="btn start" onclick="startGame()">▶ খেলা শুরু</button>
+    <p class="best" id="bestText"></p>
+  </div>
+
+  <!-- খেলা -->
+  <div class="screen" id="game">
+    <div class="bar">
+      <span id="score"></span>
+      <span class="lives" id="lives"></span>
+    </div>
+    <div class="question" id="question"></div>
+    <div class="answer" id="answer"></div>
+    <div class="pad" id="pad"></div>
+  </div>
+
+  <!-- খেলা শেষ -->
+  <div class="screen" id="result">
+    <div class="card">
+      <h2>খেলা শেষ!</h2>
+      <div class="big" id="resScore"></div>
+      <p id="resInfo"></p>
+      <button class="btn video" id="reviveBtn" onclick="showRewarded()">🎬 ভিডিও দেখে ১টা জীবন ফেরত নাও</button>
+      <button class="btn main" onclick="startGame()">আবার খেলো</button>
+      <button class="btn light" onclick="goHome()">হোমে যাও</button>
+    </div>
+  </div>
+</div>
+<div class="toast" id="toast"></div>
+
+<script>
+/* ===================== সেটিংস =====================
+   AD_EVERY = কয়টা অংকের পরে ইন্টারস্টিশিয়াল বিজ্ঞাপন আসবে।
+   এখানে সংখ্যাটা বদলে নিজের মতো ঠিক করুন।
+   (খুব ঘন ঘন বিজ্ঞাপন Start.io ও Google-এর নিয়মে নিষেধ,
+    তাই ২-এর কম দিলেও কোড ২ ধরে নেবে।) */
+const AD_EVERY = 10;
+const MIN_AD_EVERY = 2;
+const LIVES = 3;          // শুরুতে কয়টা জীবন
+const MAX_NUM = 9;        // যোগের সংখ্যা ১ থেকে কত পর্যন্ত (সহজ রাখতে ৯)
+
+/* ===================== বিজ্ঞাপন সংযোগ =====================
+   Android অ্যাপে Start.io SDK বসালে Java কোড "AdBridge"
+   দেবে। Hopweb-এ শুধু টেস্ট মেসেজ দেখাবে। */
+const adEvery = Math.max(AD_EVERY, MIN_AD_EVERY);
+function hasBridge(){ return window.AdBridge && typeof AdBridge.showInterstitial === 'function'; }
+function showInterstitial(){
+  if (hasBridge()) AdBridge.showInterstitial();
+  else toast('(টেস্ট) এখানে ইন্টারস্টিশিয়াল বিজ্ঞাপন আসবে');
+}
+function showRewarded(){
+  if (hasBridge()) AdBridge.showRewarded();
+  else { toast('(টেস্ট) এখানে ভিডিও বিজ্ঞাপন আসবে'); setTimeout(onRewardEarned, 1200); }
+}
+window.onRewardFailed = function(){ toast("এখন ভিডিও নেই, একটু পরে চেষ্টা করুন"); };
+window.onRewardEarned = function(){   // ভিডিও পুরো দেখলে Android এটা ডাকবে
+  lives = 1; revived = true; show('game'); nextQuestion();
+};
+
+/* ===================== সহায়ক ===================== */
+const bn = n => String(n).replace(/\d/g, d => '০১২৩৪৫৬৭৮৯'[d]);
+const rand = (a,b) => Math.floor(Math.random()*(b-a+1))+a;
+function show(id){ document.querySelectorAll('.screen').forEach(s=>s.classList.remove('active')); document.getElementById(id).classList.add('active'); }
+function toast(msg){ const t=document.getElementById('toast'); t.textContent=msg; t.style.display='block'; clearTimeout(t._h); t._h=setTimeout(()=>t.style.display='none',2200); }
+function getBest(){ try{ return +localStorage.getItem('best')||0 }catch(e){ return 0 } }
+function setBest(v){ try{ localStorage.setItem('best',v) }catch(e){} }
+
+/* ===================== খেলা ===================== */
+let score=0, lives=LIVES, answered=0, current=null, typed='', locked=false, revived=false;
+
+function startGame(){
+  score=0; lives=LIVES; answered=0; revived=false;
+  show('game'); nextQuestion();
+}
+function nextQuestion(){
+  if (lives<=0) return gameOver();
+  const a=rand(1,MAX_NUM), b=rand(1,MAX_NUM);
+  current={ text:`${bn(a)} + ${bn(b)} = ?`, ans:a+b };
+  typed=''; locked=false;
+  document.getElementById('question').textContent=current.text;
+  updateUI();
+}
+function updateUI(){
+  document.getElementById('score').textContent=`স্কোর ${bn(score)}`;
+  document.getElementById('lives').textContent='❤️'.repeat(Math.max(lives,0))+'🤍'.repeat(Math.max(LIVES-lives,0));
+  const a=document.getElementById('answer'); a.className='answer'; a.textContent=typed?bn(typed):'';
+}
+function press(k){
+  if (locked) return;
+  if (k==='del') typed=typed.slice(0,-1);
+  else if (k==='go') return check();
+  else if (typed.length<2) typed+=k;
+  updateUI();
+}
+function check(){
+  if (!typed) return;
+  locked=true;
+  const a=document.getElementById('answer');
+  if (+typed===current.ans){ score+=10; a.className='answer ok'; }
+  else { lives--; a.className='answer bad'; a.textContent=`সঠিক উত্তর: ${bn(current.ans)}`; }
+  answered++;
+  setTimeout(()=>{
+    if (answered % adEvery === 0 && lives>0) showInterstitial();
+    nextQuestion();
+  }, 900);
+}
+function gameOver(){
+  const best=Math.max(getBest(),score); setBest(best);
+  document.getElementById('resScore').textContent=bn(score);
+  document.getElementById('resInfo').textContent=`সেরা স্কোর: ${bn(best)}`;
+  document.getElementById('reviveBtn').style.display = revived ? 'none' : 'block';
+  show('result');
+  setTimeout(showInterstitial, 600);
+}
+function goHome(){ document.getElementById('bestText').textContent=`সেরা স্কোর: ${bn(getBest())}`; show('home'); }
+
+/* কীপ্যাড */
+const keys=['1','2','3','4','5','6','7','8','9','del','0','go'];
+document.getElementById('pad').innerHTML=keys.map(k=>{
+  const label=k==='del'?'⌫':k==='go'?'✓':bn(k);
+  const cls=k==='del'?'del':k==='go'?'go':'';
+  return `<button class="${cls}" onclick="press('${k}')">${label}</button>`;
+}).join('');
+goHome();
+</script>
+</body>
+</html>

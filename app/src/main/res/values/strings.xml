@@ -1,0 +1,6 @@
+<?xml version="1.0" encoding="utf-8"?>
+<resources>
+    <string name="app_name">যোগ খেলা</string>
+    <!-- ↓↓↓ এখানে আপনার Start.io App ID বসান ↓↓↓ -->
+    <string name="startio_app_id">210967959</string>
+</resources>
